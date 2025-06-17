@@ -4,13 +4,13 @@
 PROJECT_ID=${GCP_PROJECT_ID}
 INSTANCE_NAME="app-vm"
 MACHINE_TYPE="e2-standard-8"
-ZONE="us-central1-a"
-IMAGE_FAMILY="debian-11"
-IMAGE_PROJECT="debian-cloud"
+ZONE="asia-south1-c"
+IMAGE_FAMILY="ubuntu-2004-lts"
+IMAGE_PROJECT="ubuntu-os-cloud"
 STARTUP_SCRIPT="startup.sh"
-SERVICE_ACCOUNT="app-service-account@$PROJECT_ID.iam.gserviceaccount.com"
-REPO_URL="YOUR_REPOSITORY_URL"
-BUCKET_NAME=" nodejsmongoredis-storagebucket"
+SERVICE_ACCOUNT="app-service-account@project-pallavi-tarke.iam.gserviceaccount.com"
+REPO_URL="https://github.com/PallaviTarke/nginx-node-mongo-redis-2-VM-app.git"
+BUCKET_NAME="mongobackupbucket"
 
 # Create startup script
 cat << EOF > startup.sh
