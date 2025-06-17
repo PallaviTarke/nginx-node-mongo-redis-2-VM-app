@@ -1,51 +1,202 @@
 version: '3.8'
+
 services:
   nginx:
     image: nginx:latest
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - nodejs
+    networks:
+      - app-network
 
   nodejs:
-    build: ./nodeapp
+    build:
+      context: ./nodeapp
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
     ports:
-      - "3000:3000"
+      - "3000"
     environment:
       - MONGO_URL=mongodb://mongo:27017/mydb
       - REDIS_URL=redis://redis:6379
+      - NODE_ENV=production
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - app-network
 
   mongo:
-    image: mongo
+    image: mongo:latest
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
     volumes:
       - mongodata:/data/db
+      - ./backup/data:/backups
     ports:
-      - "27017:27017"
+      - "27017"
+    networks:
+      - app-network
 
   redis:
     image: redis:alpine
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    volumes:
+      - redis_data:/data
     ports:
-      - "6379:6379"
+      - "6379"
+    networks:
+      - app-network
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:latest
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
-
-  node-exporter:
-    image: prom/node-exporter
-    container_name: node-exporter
-    ports:
-      - "9100:9100"
+      - "9090"
+    networks:
+      - app-network
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:latest
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    volumes:
+      - grafana_data:/var/lib/grafana
     ports:
       - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1024M
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200"
+    networks:
+      - app-network
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.15.3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    volumes:
+      - ./logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.15.3
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    ports:
+      - "5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+
+  backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    volumes:
+      - ./backup/data:/backups
+      - mongodata:/mongodb_data:ro
+    environment:
+      - CRON_SCHEDULE="0 3 * * *"
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - GCP_BUCKET=${GCP_BUCKET}
+    networks:
+      - app-network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+    ports:
+      - "9100"
+    networks:
+      - app-network
 
 volumes:
   mongodata:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+
+networks:
+  app-network:
+    driver: bridge
