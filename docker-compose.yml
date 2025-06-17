@@ -36,6 +36,12 @@ services:
     ports:
       - "9090:9090"
 
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+
   grafana:
     image: grafana/grafana
     ports:

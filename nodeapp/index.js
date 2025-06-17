@@ -35,3 +35,22 @@ app.get("/all", async (req, res) => {
 });
 
 app.listen(3000, () => console.log("Server running on 3000"));
+
+const client = require('prom-client');
+const collectDefaultMetrics = client.collectDefaultMetrics;
+collectDefaultMetrics();
+
+const httpRequestCounter = new client.Counter({
+  name: 'http_requests_total',
+  help: 'Total number of HTTP requests',
+});
+
+app.use((req, res, next) => {
+  httpRequestCounter.inc();
+  next();
+});
+
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
