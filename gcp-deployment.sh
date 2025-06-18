@@ -6,7 +6,7 @@ INSTANCE_NAME="app-vm"
 MACHINE_TYPE="e2-standard-8"
 ZONE="asia-south1-c"
 IMAGE_FAMILY="ubuntu-2004-lts"
-IMAGE_PROJECT="ubuntu-os-cloud"
+IMAGE_PROJECT="ubuntu-os-pro-cloud"
 STARTUP_SCRIPT="startup.sh"
 SERVICE_ACCOUNT="app-service-account@project-pallavi-tarke.iam.gserviceaccount.com"
 REPO_URL="https://github.com/PallaviTarke/nginx-node-mongo-redis-2-VM-app.git"
@@ -72,8 +72,8 @@ echo "Creating instance template..."
 gcloud compute instance-templates create ${INSTANCE_TEMPLATE} \
   --project=${PROJECT_ID} \
   --machine-type=${MACHINE_TYPE} \
-  --image-family=${IMAGE_FAMILY} \
-  --image-project=${IMAGE_PROJECT} \
+  --image-family="ubuntu-2004-lts" \
+  --image-project="ubuntu-os-pro-cloud" \
   --scopes=cloud-platform \
   --service-account=${SERVICE_ACCOUNT} \
   --metadata-from-file=startup-script=${STARTUP_SCRIPT} \
